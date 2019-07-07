@@ -62,6 +62,7 @@ HAVING COUNT(title) > 10
 ORDER BY country DESC
 LIMIT 5
 
+-- JOIN
 SELECT cities.name AS city,
        countries.name AS country, region
 FROM cities
@@ -141,3 +142,18 @@ ON c.code = p.country_code
 WHERE year = 2010
 ORDER BY life_exp
 LIMIT 5;
+
+
+-- Set theory clause,  UNION
+-- Select fields from 2010 table
+SELECT *
+  -- From 2010 table
+  FROM economies2010
+	-- Set theory clause
+UNION
+-- Select fields from 2015 table
+SELECT *
+  -- From 2015 table
+  FROM economies2015
+-- Order by code and year
+ORDER BY code, year;
