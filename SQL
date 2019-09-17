@@ -16,6 +16,9 @@ WHERE deathdate IS NULL
 AND name IS NOT NULL;
 
 WHERE name LIKE '_r%';
+  /* %	Allows you to match any string of any length (including zero length)
+    _	Allows you to match on a single character
+    in this case, Arthur, Urgent will be returned*/
 
 WHERE name NOT LIKE 'A%';
 
@@ -42,6 +45,9 @@ FROM films
 WHERE release_year <> 2015
 ORDER BY duration;
 
+/* <> not equal
+ default order is ASC, can specify DESC*/
+
 WHERE title like 'M%'
 ORDER BY title DESC, duration;
 
@@ -61,6 +67,7 @@ GROUP BY country
 HAVING COUNT(title) > 10
 ORDER BY country DESC
 LIMIT 5
+-- where and count can't use together, so use HAVING here
 
 -- JOIN
 SELECT cities.name AS city,
@@ -77,9 +84,14 @@ INNER JOIN economies AS e
 ON c.code = e.code AND p.year = e.year;
 
 USING(code);
+/* inner join - matching or overlapping data
+  left outer join -  return all the data in A and the shared data from B
+  full outer join - all data
 
+  USING is equivalent to ON ... = ...
+*/
 
-####self join
+--self join
 SELECT p1.country_code,
        p1.size AS size2010,
        p2.size AS size2015,
@@ -132,7 +144,7 @@ WHERE region LIKE 'M%esia';
 
 SELECT c.name AS city, l.name AS language
 FROM cities AS c
-CROSS JOIN languages AS l
+CROSS JOIN languages AS l  -- cross join, all combinations city1, language 1-10...
 WHERE c.name LIKE 'Hyder%';
 
 SELECT c.name AS country, region, life_expectancy AS life_exp
@@ -144,16 +156,42 @@ ORDER BY life_exp
 LIMIT 5;
 
 
--- Set theory clause,  UNION
--- Select fields from 2010 table
-SELECT *
-  -- From 2010 table
-  FROM economies2010
-	-- Set theory clause
+-- UNION
+/*The join such as INNER JOIN or LEFT JOIN combines columns from two tables
+while the UNION combines rows from two queries.
+join appends the result sets horizontally, union vertically.*/
+SELECT country_code
+  FROM cities
 UNION
--- Select fields from 2015 table
-SELECT *
-  -- From 2015 table
-  FROM economies2015
--- Order by code and year
-ORDER BY code, year;
+SELECT code
+  FROM currencies
+ORDER BY country_code;
+/*union - no duplicates bewteen tables,
+  union all - include duplicates between tables
+  intersect - shared occurance (if select different variables, then output none)
+  Except - non-shared occurance in A
+*/
+-- non-capital cities
+SELECT name
+  FROM cities
+EXCEPT
+SELECT capital
+  FROM countries
+ORDER BY name;
+
+-- Semi JOIN
+--  the unique languages spoken in the Middle East
+SELECT DISTINCT name FROM languages
+WHERE code IN
+  -- Subquery
+  (SELECT code FROM countries
+   WHERE region = 'Middle East')
+ORDER BY name;
+
+-- functions the same as above
+SELECT DISTINCT languages.name AS language
+FROM languages
+INNER JOIN countries
+ON languages.code = countries.code
+WHERE region = 'Middle East'
+ORDER BY language;
