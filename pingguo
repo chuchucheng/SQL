@@ -1,0 +1,45 @@
+-- table里有date, session_id, user_id, time_spent, 要求query每天average time spent per user
+SELECT AVG(time_spent)
+FROM
+(SELECT SUM(time_spent)
+ FROM table
+ GROUP BY date, user_id);
+
+
+-- difference for where and on in left join
+ SELECT *
+ FROM Orders
+ LEFT JOIN OrderLines ON OrderLines.OrderID=Orders.ID
+ WHERE Orders.ID = 12345
+
+
+ SELECT *
+ FROM Orders
+ LEFT JOIN OrderLines ON OrderLines.OrderID=Orders.ID
+     AND Orders.ID = 12345
+
+/* The first will return an order and its lines, if any, for order number 12345.
+The second will return all orders, but only order 12345 will have any lines
+associated with it. */
+
+-- dense rank（）and rank（）
+SELECT
+  v,
+  ROW_NUMBER() OVER (ORDER BY v) row_number,
+  RANK()       OVER (ORDER BY v) rank,
+  DENSE_RANK() OVER (ORDER BY v) dense_rank
+FROM t
+ORDER BY v;
+
+/* RANK：
+Ties are assigned the same rank, with the next ranking(s) skipped.
+
+DENSE_RANK：ranks are consecutive. No ranks are skipped */
+
+-- Given table where each row is a single transcation of columns as
+-- [customer_id, item_id, price, city, state, zip, time_stamp],
+-- count the number of unique customers for each state.
+
+SELECT COUNT(DISTINCT(customer_id)) as n_unique_customer, state
+ FROM table
+ GROUP BY state;
