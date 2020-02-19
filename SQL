@@ -735,3 +735,212 @@ LEFT JOIN away ON m.id = away.id
 WHERE m.season = '2014/2015'
       AND ((home.team_long_name = 'Manchester United' AND home.outcome = 'MU Loss')
       OR (away.team_long_name = 'Manchester United' AND away.outcome = 'MU Loss'));
+
+
+------ additional statements, preparation for insight ---
+
+-- Pivot table with one row and five columns
+SELECT 'AverageCost' AS Cost_Sorted_By_Production_Days,
+[0], [1], [2], [3], [4]
+FROM
+(SELECT DaysToManufacture, StandardCost
+    FROM Production.Product) AS SourceTable
+PIVOT
+(
+AVG(StandardCost)
+FOR DaysToManufacture IN ([0], [1], [2], [3], [4])
+) AS PivotTable;
+
+
+
+------- Window functions ----------
+SELECT
+  Year,
+  -- Assign numbers to each year
+  ROW_NUMBER() OVER() AS Row_N
+FROM (
+  SELECT DISTINCT year
+  FROM Summer_Medals
+  ORDER BY Year ASC
+) AS Years
+ORDER BY Year ASC;
+
+
+
+WITH Athlete_Medals AS (
+  SELECT
+    -- Count the number of medals each athlete has earned
+    Athlete,
+    COUNT(*) AS Medals
+  FROM Summer_Medals
+  GROUP BY Athlete)
+
+SELECT
+  -- Number each athlete by how many medals they've earned
+  athlete,
+  ROW_NUMBER() OVER (ORDER BY medals DESC) AS Row_N
+FROM Athlete_Medals
+ORDER BY Medals DESC;
+
+
+WITH Weightlifting_Gold AS (
+  SELECT
+    -- Return each year's champions' countries
+    Year,
+    Country AS champion
+  FROM Summer_Medals
+  WHERE
+    Discipline = 'Weightlifting' AND
+    Event = '69KG' AND
+    Gender = 'Men' AND
+    Medal = 'Gold')
+
+SELECT
+  Year, Champion,
+  -- Fetch the previous year's champion
+  LAG(Champion,1) OVER
+    (ORDER BY year ASC) AS Last_Champion
+FROM Weightlifting_Gold
+ORDER BY Year ASC;
+
+
+
+
+WITH Athletics_Gold AS (
+  SELECT DISTINCT
+    Gender, Year, Event, Country
+  FROM Summer_Medals
+  WHERE
+    Year >= 2000 AND
+    Discipline = 'Athletics' AND
+    Event IN ('100M', '10000M') AND
+    Medal = 'Gold')
+
+SELECT
+  Gender, Year, Event,
+  Country AS Champion,
+  -- Fetch the previous year's champion by gender and event
+  -- to fetch the following, use LEAD instead of LAG
+  LAG(country) OVER (PARTITION BY gender, event
+            ORDER BY Year ASC) AS Last_Champion
+FROM Athletics_Gold
+ORDER BY Event ASC, Gender ASC, Year ASC;
+
+
+SELECT
+  -- Fetch all athletes and the first althete alphabetically
+  athlete,
+  FIRST_VALUE(athlete) OVER (
+    ORDER BY athlete ASC
+  ) AS First_Athlete
+FROM All_Male_Medalists;
+
+
+SELECT
+  Year,
+  City,
+  -- Get the last city in which the Olympic games were held
+  LAST_VALUE(city) OVER (
+   ORDER BY year ASC
+   RANGE BETWEEN
+     UNBOUNDED PRECEDING AND
+     UNBOUNDED FOLLOWING
+  ) AS Last_City
+FROM Hosts
+ORDER BY Year ASC;
+
+
+SELECT
+  Athlete,
+  Medals,
+  -- Rank athletes by the medals they've won
+  RANK() OVER (ORDER BY medals DESC) AS Rank_N
+FROM Athlete_Medals
+ORDER BY Medals DESC;
+
+
+
+WITH Athlete_Medals AS (
+  SELECT
+    Country, Athlete, COUNT(*) AS Medals
+  FROM Summer_Medals
+  WHERE
+    Country IN ('JPN', 'KOR')
+    AND Year >= 2000
+  GROUP BY Country, Athlete
+  HAVING COUNT(*) > 1)
+
+SELECT
+  Country,
+  -- Rank athletes in each country by the medals they've won
+  athlete,
+  DENSE_RANK() OVER (PARTITION BY country
+                ORDER BY Medals DESC) AS Rank_N
+FROM Athlete_Medals
+ORDER BY Country ASC, RANK_N ASC;
+
+
+--- Paging
+SELECT
+  --- Split up the distinct events into 111 unique groups
+  DISTINCT event,
+  NTILE(111) OVER (ORDER BY event ASC) AS Page
+FROM Events
+ORDER BY Event ASC;
+
+
+
+WITH Athlete_Medals AS (
+  SELECT Athlete, COUNT(*) AS Medals
+  FROM Summer_Medals
+  GROUP BY Athlete
+  HAVING COUNT(*) > 1),
+
+  Thirds AS (
+  SELECT
+    Athlete,
+    Medals,
+    NTILE(3) OVER (ORDER BY Medals DESC) AS Third
+  FROM Athlete_Medals)
+
+SELECT
+  -- Get the average medals earned in each third
+  Third,
+  AVG(medals) AS Avg_Medals
+FROM Thirds
+GROUP BY Third
+ORDER BY Third ASC;
+
+
+SELECT
+  -- Calculate the running total of athlete medals
+  athlete,
+  medals,
+  SUM(medals) OVER (ORDER BY athlete ASC) AS Max_Medals
+FROM Athlete_Medals
+ORDER BY Athlete ASC;
+
+
+SELECT
+  -- Return the max medals earned so far per country
+  year,
+  country,
+  medals,
+  MAX(medals) OVER (PARTITION BY country
+                ORDER BY year ASC) AS Max_Medals
+FROM Country_Medals
+ORDER BY Country ASC, Year ASC;
+
+
+
+
+SELECT
+  -- Select each year's medals
+  year,
+  medals,
+  -- Get the max of the current and next years'  medals
+  MAX(medals) OVER (ORDER BY year ASC
+             ROWS BETWEEN current row
+             AND 1 following) AS Max_Medals
+FROM Scandinavian_Medals
+ORDER BY Year ASC;
